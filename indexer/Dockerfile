@@ -9,6 +9,8 @@ RUN apt-get update \
         git \
         pkg-config \
         libpq-dev \
+        clang \
+        libclang-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Cargo.toml Cargo.lock ./
