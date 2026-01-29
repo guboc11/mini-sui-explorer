@@ -29,8 +29,6 @@ services:
     command:
       - "--remote-store-url"
       - "https://checkpoints.testnet.sui.io"
-      - "--streaming-url"
-      - "https://fullnode.testnet.sui.io:443"
     depends_on:
       - postgres
 
