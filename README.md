@@ -28,3 +28,9 @@ docker run --name sui-postgres -d \
   -p 5432:5432 \
   postgres:16
 ```
+
+## Local Docker Compose
+Run Postgres + indexer together for local development:
+```sh
+docker compose up --build
+```
