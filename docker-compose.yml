@@ -29,6 +29,8 @@ services:
     environment:
       RUST_LOG: debug
     command:
+      - "--rpc-api-url"
+      - "https://fullnode.testnet.sui.io:443"
       - "--remote-store-url"
       - "https://checkpoints.testnet.sui.io"
     depends_on:
