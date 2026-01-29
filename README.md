@@ -26,7 +26,7 @@ docker compose up -d indexer
 
 By default, the indexer starts from the latest checkpoint and requires an RPC URL:
 ```sh
-RPC_API_URL=<grpc_fullnode_url> docker compose up -d indexer
+docker compose up -d indexer -- --rpc-api-url <grpc_fullnode_url>
 ```
 
 To start from genesis (checkpoint 0):
