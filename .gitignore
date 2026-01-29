@@ -1,5 +1,6 @@
 .vscode
 indexer/.env*
 backend/.env*
+postgres.env
 
 target
