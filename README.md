@@ -24,6 +24,16 @@ docker compose up -d backend
 docker compose up -d indexer
 ```
 
+By default, the indexer starts from the latest checkpoint and requires an RPC URL:
+```sh
+RPC_API_URL=<grpc_fullnode_url> docker compose up -d indexer
+```
+
+To start from genesis (checkpoint 0):
+```sh
+docker compose up -d indexer -- --from-genesis
+```
+
 If you changed Dockerfiles or source code and want those changes in the containers, rebuild images first:
 ```sh
 docker compose build backend indexer
@@ -38,5 +48,6 @@ docker compose down
 Run the custom indexer directly:
 ```sh
 cargo run -- \
+  --rpc-api-url <grpc_fullnode_url> \
   --remote-store-url https://checkpoints.testnet.sui.io
 ```
