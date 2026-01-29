@@ -1,4 +1,5 @@
 .vscode
 indexer/.env*
+backend/.env*
 
 target
