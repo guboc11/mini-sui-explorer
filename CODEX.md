@@ -48,6 +48,14 @@
 - Prefer `apply_patch` for small edits.
 - Summarize changes and suggest next steps.
 
+## Work Plan
+
+- Maintain a granular, step-by-step schedule in `WORK_PLAN.md`.
+- Organize the plan by date and a goal-focused title.
+- Under each date, add one subheading that groups tasks.
+- Keep tasks extremely small, concrete, and executable.
+- Update the plan whenever scope or rules change.
+
 ## Questions & Assumptions
 
 - Ask if requirements are ambiguous.
