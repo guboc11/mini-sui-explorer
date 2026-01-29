@@ -13,6 +13,10 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type dbPinger interface {
+	PingContext(ctx context.Context) error
+}
+
 func main() {
 	_ = godotenv.Load()
 
@@ -33,15 +37,26 @@ func main() {
 		log.Fatal(err)
 	}
 
+	router := setupRouter(db)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	_ = router.Run(":" + port)
+}
+
+func setupRouter(db dbPinger) *gin.Engine {
 	router := gin.Default()
 
 	router.GET("/health", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
 
-		dbStatus := "ok"
-		if err := db.PingContext(ctx); err != nil {
-			dbStatus = "unavailable"
+		dbStatus := "unavailable"
+		if db != nil && db.PingContext(ctx) == nil {
+			dbStatus = "ok"
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -50,10 +65,5 @@ func main() {
 		})
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	_ = router.Run(":" + port)
+	return router
 }
