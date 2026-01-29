@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM rust:1.91.1-bookworm AS builder
+FROM rust:1.91.1-jammy AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY diesel.toml ./
 
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+FROM ubuntu:22.04
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

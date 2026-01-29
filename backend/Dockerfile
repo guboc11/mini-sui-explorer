@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.23-bookworm AS builder
+FROM golang:1.23-jammy AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/backend-server ./...
 
-FROM debian:bookworm-slim
+FROM ubuntu:22.04
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
