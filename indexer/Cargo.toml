@@ -6,6 +6,8 @@ edition = "2024"
 [dependencies]
 # Core framework dependencies
 sui-indexer-alt-framework = { git = "https://github.com/MystenLabs/sui.git", branch = "testnet" }
+sui-indexer-alt-metrics = { git = "https://github.com/MystenLabs/sui.git", branch = "testnet" }
+prometheus = "0.13"
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }

@@ -2,6 +2,7 @@ mod handlers;
 mod models;
 
 use handlers::ObjectDataHandler;
+use handlers::PackageDataHandler;
 use handlers::TransactionDigestHandler;
 
 pub mod schema;
@@ -9,10 +10,15 @@ pub mod schema;
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use diesel_migrations::{EmbeddedMigrations, embed_migrations};
+use prometheus::Registry;
 use std::future::Future;
 use std::pin::Pin;
+use sui_indexer_alt_metrics::MetricsService;
 use sui_indexer_alt_framework::{
     cluster::{Args, IndexerCluster},
+    ingestion::IngestionConfig,
+    postgres::DbArgs,
+    Indexer,
     pipeline::sequential::SequentialConfig,
     service::Error,
 };
@@ -129,32 +135,68 @@ pub async fn run() -> Result<()> {
 
     // Parse command-line arguments (checkpoint range, URLs, performance settings)
     let cli = CliArgs::parse();
-    let mut args = cli.cluster;
     println!("[boot] args parsed");
 
-    match resolve_start_checkpoint(&mut args, cli.from_genesis, cli.latest_rpc_url.as_ref()).await?
-    {
+    let main_args = cli.cluster;
+    let packages_args = clone_args(&main_args);
+
+    let latest_rpc_url = cli.latest_rpc_url.as_ref();
+    let from_genesis = cli.from_genesis;
+
+    tokio::try_join!(
+        run_main_indexer(database_url.clone(), main_args, from_genesis, latest_rpc_url),
+        run_packages_only_with_args(database_url, packages_args),
+    )?;
+    Ok(())
+}
+
+pub async fn run_packages_only() -> Result<()> {
+    println!("[boot] package indexer start");
+    dotenvy::dotenv().ok();
+
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in the environment")
+        .parse::<Url>()
+        .expect("Invalid database URL");
+
+    let args = Args::parse();
+    run_packages_only_with_args(database_url, args).await
+}
+
+fn clone_args(args: &Args) -> Args {
+    Args {
+        indexer_args: args.indexer_args.clone(),
+        client_args: args.client_args.clone(),
+        metrics_args: args.metrics_args.clone(),
+    }
+}
+
+async fn run_main_indexer(
+    database_url: Url,
+    mut args: Args,
+    from_genesis: bool,
+    latest_rpc_url: Option<&Url>,
+) -> Result<()> {
+    match resolve_start_checkpoint(&mut args, from_genesis, latest_rpc_url).await? {
         StartMode::Provided => println!("[boot] using provided first_checkpoint"),
         StartMode::Genesis => println!("[boot] from-genesis enabled: starting at checkpoint 0"),
         StartMode::Latest(latest) => println!("[boot] start-latest: using checkpoint {latest}"),
     }
 
-    // Build and configure the indexer cluster
     println!("[boot] building cluster");
     let mut cluster = IndexerCluster::builder()
-        .with_args(args) // Apply command-line configuration
-        .with_database_url(database_url) // Set up database URL
-        .with_migrations(&MIGRATIONS) // Enable automatic schema migrations
+        .with_args(args)
+        .with_database_url(database_url)
+        .with_migrations(&MIGRATIONS)
         .build()
         .await?;
     println!("[boot] cluster built");
 
-    // Register our custom sequential pipeline with the cluster
     println!("[boot] registering TransactionDigestHandler pipeline");
     cluster
         .sequential_pipeline(
-            TransactionDigestHandler,    // Our processor/handler implementation
-            SequentialConfig::default(), // Use default batch sizes and checkpoint lag
+            TransactionDigestHandler,
+            SequentialConfig::default(),
         )
         .await?;
     println!("[boot] TransactionDigestHandler pipeline registered");
@@ -162,16 +204,53 @@ pub async fn run() -> Result<()> {
     println!("[boot] registering ObjectDataHandler pipeline");
     cluster
         .sequential_pipeline(
-            ObjectDataHandler,          // Object data processor/handler implementation
-            SequentialConfig::default(), // Use default batch sizes and checkpoint lag
+            ObjectDataHandler,
+            SequentialConfig::default(),
         )
         .await?;
     println!("[boot] ObjectDataHandler pipeline registered");
 
-    // Start the indexer and wait for completion
     println!("[boot] starting cluster");
     let service = cluster.run().await?;
     println!("[boot] cluster started, entering service.main()");
+    match service.main().await {
+        Ok(()) | Err(Error::Terminated) => Ok(()),
+        Err(Error::Aborted) => {
+            bail!("Indexer aborted due to an unexpected error")
+        }
+        Err(Error::Task(e)) => {
+            bail!(e)
+        }
+    }
+}
+
+async fn run_packages_only_with_args(database_url: Url, mut args: Args) -> Result<()> {
+    println!("[boot] package indexer args parsed (forced first_checkpoint=0)");
+    args.indexer_args.first_checkpoint = Some(0);
+    args.metrics_args.metrics_address = "0.0.0.0:9185"
+        .parse()
+        .expect("invalid metrics address");
+
+    let registry = Registry::new();
+    let metrics = MetricsService::new(args.metrics_args.clone(), registry);
+    let mut indexer = Indexer::new_from_pg(
+        database_url,
+        DbArgs::default(),
+        args.indexer_args,
+        args.client_args,
+        IngestionConfig::default(),
+        Some(&MIGRATIONS),
+        None,
+        metrics.registry(),
+    )
+    .await?;
+
+    indexer
+        .sequential_pipeline(PackageDataHandler, SequentialConfig::default())
+        .await?;
+
+    let mut service = indexer.run().await?;
+    service = service.merge(metrics.run().await?);
     match service.main().await {
         Ok(()) | Err(Error::Terminated) => Ok(()),
         Err(Error::Aborted) => {

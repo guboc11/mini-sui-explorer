@@ -4,8 +4,10 @@ use sui_indexer_alt_framework::pipeline::Processor;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 
 use crate::models::StoredObjectData;
+use crate::models::StoredPackageData;
 use crate::models::StoredTransactionDigest;
 use crate::schema::sui_objects::dsl as sui_objects_dsl;
+use crate::schema::sui_packages::dsl as sui_packages_dsl;
 use crate::schema::transaction_digests::dsl as tx_digests_dsl;
 
 use diesel_async::RunQueryDsl;
@@ -130,6 +132,70 @@ impl Handler for ObjectDataHandler {
             let inserted = diesel::insert_into(sui_objects_dsl::sui_objects)
                 .values(chunk)
                 .on_conflict((sui_objects_dsl::object_id, sui_objects_dsl::object_version))
+                .do_nothing()
+                .execute(conn)
+                .await?;
+            total_inserted += inserted;
+        }
+
+        Ok(total_inserted)
+    }
+}
+
+pub struct PackageDataHandler;
+
+#[async_trait::async_trait]
+impl Processor for PackageDataHandler {
+    const NAME: &'static str = "package_data_handler";
+
+    type Value = StoredPackageData;
+
+    async fn process(&self, checkpoint: &Arc<Checkpoint>) -> Result<Vec<Self::Value>> {
+        let checkpoint_seq = checkpoint.summary.sequence_number as i64;
+
+        let packages = checkpoint
+            .transactions
+            .iter()
+            .flat_map(|tx| tx.output_objects(&checkpoint.object_set))
+            .filter(|object| object.is_package())
+            .filter(|object| object.version().value() == 1)
+            .filter(|object| matches!(object.owner(), Owner::Immutable))
+            .map(|object| {
+                Ok(StoredPackageData {
+                    object_id: object.id().to_string(),
+                    object_version: object.version().value() as i64,
+                    object_digest: object.digest().to_string(),
+                    checkpoint_sequence_number: checkpoint_seq,
+                    owner_type: Some("immutable".to_string()),
+                    owner_id: None,
+                    object_type: None,
+                    object_bcs: Some(bcs::to_bytes(object)?),
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(packages)
+    }
+}
+
+#[async_trait::async_trait]
+impl Handler for PackageDataHandler {
+    type Store = Db;
+    type Batch = Vec<Self::Value>;
+
+    fn batch(&self, batch: &mut Self::Batch, values: std::vec::IntoIter<Self::Value>) {
+        batch.extend(values);
+    }
+
+    async fn commit<'a>(&self, batch: &Self::Batch, conn: &mut Connection<'a>) -> Result<usize> {
+        const MAX_POSTGRES_PARAMS: usize = 65_535;
+        let max_rows = MAX_POSTGRES_PARAMS / StoredPackageData::FIELD_COUNT;
+        let mut total_inserted = 0;
+
+        for chunk in batch.chunks(max_rows) {
+            let inserted = diesel::insert_into(sui_packages_dsl::sui_packages)
+                .values(chunk)
+                .on_conflict((sui_packages_dsl::object_id, sui_packages_dsl::object_version))
                 .do_nothing()
                 .execute(conn)
                 .await?;

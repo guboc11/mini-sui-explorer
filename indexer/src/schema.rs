@@ -19,3 +19,16 @@ diesel::table! {
         object_bcs -> Nullable<Bytea>,
     }
 }
+
+diesel::table! {
+    sui_packages (object_id, object_version) {
+        object_id -> Text,
+        object_version -> Int8,
+        object_digest -> Text,
+        checkpoint_sequence_number -> Int8,
+        owner_type -> Nullable<Text>,
+        owner_id -> Nullable<Text>,
+        object_type -> Nullable<Text>,
+        object_bcs -> Nullable<Bytea>,
+    }
+}
