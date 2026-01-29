@@ -17,6 +17,11 @@ services:
     container_name: simple-sui-indexer
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/sui_indexer
+    command:
+      - "--remote-store-url"
+      - "https://checkpoints.testnet.sui.io"
+      - "--streaming-url"
+      - "https://fullnode.testnet.sui.io:443"
     depends_on:
       - postgres
 

@@ -37,4 +37,4 @@ COPY --from=builder /app/target/release/simple-sui-indexer /app/simple-sui-index
 
 ENV RUST_LOG=info
 
-CMD ["/app/simple-sui-indexer"]
+ENTRYPOINT ["/app/simple-sui-indexer"]

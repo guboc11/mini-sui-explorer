@@ -14,7 +14,9 @@ Set `DATABASE_URL` to point at your **external** PostgreSQL instance:
 ```sh
 docker run --rm \
   -e DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/sui_indexer \
-  simple-sui-indexer:local
+  simple-sui-indexer:local \
+  --remote-store-url https://checkpoints.testnet.sui.io \
+  --streaming-url https://fullnode.testnet.sui.io:443
 ```
 
 ### Run PostgreSQL separately
@@ -33,4 +35,12 @@ docker run --name sui-postgres -d \
 Run Postgres + indexer together for local development:
 ```sh
 docker compose up --build
+```
+
+## Local Run (cargo)
+Run the custom indexer directly:
+```sh
+cargo run -- \
+  --remote-store-url https://checkpoints.testnet.sui.io \
+  --streaming-url https://fullnode.testnet.sui.io:443
 ```
