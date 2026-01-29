@@ -25,7 +25,9 @@ services:
       context: ./indexer
     container_name: simple-sui-indexer
     env_file:
-      - ./indexer/.env.postgres
+      - ./indexer/.env
+    environment:
+      RUST_LOG: debug
     command:
       - "--remote-store-url"
       - "https://checkpoints.testnet.sui.io"
