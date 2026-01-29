@@ -18,6 +18,10 @@ func (f fakeDB) PingContext(ctx context.Context) error {
 	return f.err
 }
 
+func (f fakeDB) ObjectTypeCounts(ctx context.Context, packageID string) ([]objectTypeCount, error) {
+	return nil, f.err
+}
+
 func TestHealthOK(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := setupRouter(fakeDB{err: nil})
