@@ -19,6 +19,9 @@ diesel = { version = "2.0", features = ["postgres", "r2d2"] }
 diesel-async = { version = "0.5", features = ["bb8", "postgres", "async-connection-wrapper"] }
 diesel_migrations = "2.0"
 
+# Sui RPC client for latest checkpoint lookup
+sui-rpc-api = { git = "https://github.com/MystenLabs/sui.git", branch = "testnet" }
+
 # Async traits
 async-trait = "0.1"
 

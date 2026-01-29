@@ -7223,6 +7223,7 @@ dependencies = [
  "diesel_migrations",
  "dotenvy",
  "sui-indexer-alt-framework",
+ "sui-rpc-api",
  "tokio",
  "url",
 ]
