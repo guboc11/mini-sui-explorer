@@ -32,9 +32,23 @@ docker run --name sui-postgres -d \
 ```
 
 ## Local Docker Compose
-Run Postgres + indexer together for local development:
+Run Postgres + backend + indexer together for local development:
 ```sh
 docker compose up --build
+```
+
+## Backend Docker
+Build the backend image:
+```sh
+docker build -t simple-sui-backend:local ./backend
+```
+
+Run the backend container:
+```sh
+docker run --rm -p 8080:8080 \
+  -e PORT=8080 \
+  -e DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/sui_indexer \
+  simple-sui-backend:local
 ```
 
 ## Local Run (cargo)

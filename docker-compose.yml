@@ -11,6 +11,18 @@ services:
     volumes:
       - sui_postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: ./backend
+    container_name: simple-sui-backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/sui_indexer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
   indexer:
     build:
       context: ./indexer
