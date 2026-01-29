@@ -6,7 +6,7 @@
 - If large changes are required, brief the plan first and propose splitting the work.
 - For each prompt, make exactly one git commit.
 - Commit message must include the prompt in English, even if the original prompt was in Korean.
-- Commit message format: "prompt: {PROMPT_MESSAGE}"
+- Commit message format: "\[PRMPT\] {COMMIT_TYPE}: {PROMPT_MESSAGE}"
 
 # Basic Rules
 
